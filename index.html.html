@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#2563eb" />
+  <title>Office Attendance</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { primary: '#2563eb', success: '#16a34a', warning: '#d97706', danger: '#dc2626' }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    .card { box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .btn-press:active { transform: scale(0.97); }
+    .fade-in { animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    input, select, textarea { font-size: 16px !important; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen">
+
+  <!-- AUTH SCREEN -->
+  <div id="auth-screen" class="min-h-screen flex flex-col justify-center px-5 py-8">
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <span class="text-white text-2xl font-bold">A</span>
+      </div>
+      <h1 class="text-2xl font-bold">Office Attendance</h1>
+      <p class="text-sm text-gray-500 mt-1">Login or create account</p>
+    </div>
+
+    <div class="bg-white rounded-2xl p-5 card max-w-md mx-auto w-full">
+      <div class="flex mb-5 bg-gray-100 rounded-xl p-1">
+        <button id="tab-login" onclick="showAuthTab('login')" class="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-white shadow text-primary">Login</button>
+        <button id="tab-register" onclick="showAuthTab('register')" class="flex-1 py-2.5 rounded-lg text-sm font-semibold text-gray-500">Register</button>
+      </div>
+
+      <div id="form-login">
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Email</label>
+            <input type="email" id="login-email" placeholder="you@company.com" class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Password</label>
+            <input type="password" id="login-password" placeholder="••••••••" class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50" />
+          </div>
+          <button onclick="doLogin()" id="btn-login" class="w-full bg-primary text-white py-3.5 rounded-xl font-semibold btn-press mt-2">Login</button>
+          <button onclick="doForgotPassword()" type="button" class="w-full text-primary text-sm py-2 font-medium">Forgot Password?</button>
+        </div>
+      </div>
+
+      <div id="form-register" class="hidden">
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Full Name</label>
+            <input type="text" id="reg-name" placeholder="Your Name" class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Employee ID</label>
+            <input type="text" id="reg-empid" placeholder="EMP001" class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Email</label>
+            <input type="email" id="reg-email" placeholder="you@company.com" class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Password (min 6 characters)</label>
+            <input type="password" id="reg-password" placeholder="••••••••" class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50" />
+          </div>
+          <button onclick="doRegister()" id="btn-register" class="w-full bg-primary text-white py-3.5 rounded-xl font-semibold btn-press mt-2">Create Account</button>
+        </div>
+      </div>
+
+      <p id="auth-error" class="text-danger text-sm text-center mt-4 hidden"></p>
+      <p id="auth-status" class="text-gray-500 text-sm text-center mt-2 hidden"></p>
+    </div>
+  </div>
+
+  <!-- APP SCREEN -->
+  <div id="app-screen" class="hidden">
+    <header class="bg-primary text-white sticky top-0 z-40 shadow-md">
+      <div class="px-4 py-3 flex items-center justify-between">
+        <div>
+          <h1 class="text-lg font-bold">Office Attendance</h1>
+          <p class="text-xs text-blue-100" id="header-user">—</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="role-badge" class="text-xs bg-white/20 px-2.5 py-1 rounded-full">Employee</span>
+          <button onclick="doLogout()" class="text-xs bg-white/10 px-2.5 py-1 rounded-full">Logout</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="pb-24 px-4 pt-4 max-w-lg mx-auto">
+      <!-- DASHBOARD -->
+      <section id="page-dashboard" class="page fade-in">
+        <div class="bg-white rounded-2xl p-5 card mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="font-semibold text-gray-700">Today's Status</h2>
+            <span id="today-status-badge" class="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">Not Marked</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div class="bg-blue-50 rounded-xl p-3 text-center">
+              <p class="text-xs text-blue-600 mb-1">Check In</p>
+              <p class="text-lg font-bold text-blue-700" id="checkin-time">--:--</p>
+            </div>
+            <div class="bg-green-50 rounded-xl p-3 text-center">
+              <p class="text-xs text-green-600 mb-1">Check Out</p>
+              <p class="text-lg font-bold text-green-700" id="checkout-time">--:--</p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button id="btn-checkin" onclick="markAttendance('in')" class="flex-1 bg-primary text-white py-3 rounded-xl font-semibold btn-press">Check In</button>
+            <button id="btn-checkout" onclick="markAttendance('out')" class="flex-1 bg-success text-white py-3 rounded-xl font-semibold btn-press opacity-40" disabled>Check Out</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3 mb-4">
+          <div class="bg-white rounded-xl p-3 text-center card">
+            <p class="text-2xl font-bold text-primary" id="stat-present">0</p>
+            <p class="text-xs text-gray-500 mt-1">Present</p>
+          </div>
+          <div class="bg-white rounded-xl p-3 text-center card">
+            <p class="text-2xl font-bold text-warning" id="stat-leave">0</p>
+            <p class="text-xs text-gray-500 mt-1">Leaves</p>
+          </div>
+          <div class="bg-white rounded-xl p-3 text-center card">
+            <p class="text-2xl font-bold text-danger" id="stat-absent">0</p>
+            <p class="text-xs text-gray-500 mt-1">Absent</p>
+          </div>
+        </div>
+
+        <div id="admin-pending" class="hidden mb-4">
+          <h3 class="font-semibold text-gray-700 mb-2">Pending Approvals</h3>
+          <div id="pending-list" class="space-y-2"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 card">
+          <h3 class="font-semibold text-gray-700 mb-3">Quick Info</h3>
+          <p class="text-sm text-gray-500">Use the bottom menu to mark attendance, apply leave or request advance.</p>
+        </div>
+      </section>
+
+      <!-- ATTENDANCE -->
+      <section id="page-attendance" class="page hidden fade-in">
+        <div class="bg-white rounded-2xl p-4 card mb-4">
+          <h2 class="font-semibold text-gray-700 mb-3">My Attendance</h2>
+          <div id="attendance-list" class="space-y-2 max-h-80 overflow-y-auto"></div>
+        </div>
+        <div class="bg-white rounded-2xl p-4 card">
+          <h3 class="font-semibold text-gray-700 mb-3">Mark Absence / Late</h3>
+          <div class="space-y-3">
+            <input type="date" id="absent-date" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50" />
+            <select id="absent-type" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50">
+              <option value="absent">Absent</option>
+              <option value="late">Late</option>
+              <option value="half">Half Day</option>
+            </select>
+            <textarea id="absent-reason" rows="2" placeholder="Reason..." class="w-full border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50 resize-none"></textarea>
+            <button onclick="submitAbsence()" class="w-full bg-warning text-white py-3 rounded-xl font-semibold btn-press">Submit</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- LEAVE -->
+      <section id="page-leave" class="page hidden fade-in">
+        <div class="bg-white rounded-2xl p-4 card mb-4">
+          <h2 class="font-semibold text-gray-700 mb-3">Apply for Leave</h2>
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <input type="date" id="leave-from" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50" />
+              <input type="date" id="leave-to" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50" />
+            </div>
+            <select id="leave-type" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50">
+              <option value="casual">Casual Leave</option>
+              <option value="sick">Sick Leave</option>
+              <option value="earned">Earned Leave</option>
+              <option value="unpaid">Unpaid Leave</option>
+            </select>
+            <textarea id="leave-reason" rows="2" placeholder="Reason..." class="w-full border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50 resize-none"></textarea>
+            <button onclick="submitLeave()" class="w-full bg-primary text-white py-3 rounded-xl font-semibold btn-press">Submit Leave</button>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl p-4 card">
+          <h3 class="font-semibold text-gray-700 mb-3">My Leave Requests</h3>
+          <div id="leave-requests" class="space-y-2"></div>
+        </div>
+      </section>
+
+      <!-- ADVANCE -->
+      <section id="page-advance" class="page hidden fade-in">
+        <div class="bg-white rounded-2xl p-4 card mb-4">
+          <h2 class="font-semibold text-gray-700 mb-3">Request Advance</h2>
+          <div class="space-y-3">
+            <input type="number" id="adv-amount" placeholder="Amount in ₹" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50" />
+            <textarea id="adv-reason" rows="2" placeholder="Reason..." class="w-full border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50 resize-none"></textarea>
+            <select id="adv-repay" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50">
+              <option value="next">From next salary</option>
+              <option value="2months">Over 2 months</option>
+              <option value="3months">Over 3 months</option>
+            </select>
+            <button onclick="submitAdvance()" class="w-full bg-primary text-white py-3 rounded-xl font-semibold btn-press">Submit Request</button>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl p-4 card">
+          <h3 class="font-semibold text-gray-700 mb-3">My Advance Requests</h3>
+          <div id="advance-list" class="space-y-2"></div>
+        </div>
+      </section>
+
+      <!-- TEAM (Admin) -->
+      <section id="page-team" class="page hidden fade-in">
+        <div class="bg-white rounded-2xl p-4 card mb-4">
+          <h2 class="font-semibold text-gray-700 mb-3">All Employees</h2>
+          <div id="team-list" class="space-y-2"></div>
+        </div>
+        <div class="bg-white rounded-2xl p-4 card">
+          <h2 class="font-semibold text-gray-700 mb-3">Pending Requests</h2>
+          <div id="all-pending" class="space-y-2"></div>
+        </div>
+      </section>
+
+      <!-- PROFILE -->
+      <section id="page-profile" class="page hidden fade-in">
+        <div class="bg-white rounded-2xl p-5 card mb-4 text-center">
+          <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+            <span class="text-2xl font-bold text-primary" id="profile-initial">U</span>
+          </div>
+          <h2 class="font-bold text-lg" id="profile-name">—</h2>
+          <p class="text-sm text-gray-500" id="profile-role">Employee</p>
+          <p class="text-xs text-gray-400 mt-1" id="profile-id">—</p>
+          <p class="text-xs text-gray-400" id="profile-email">—</p>
+        </div>
+        <button onclick="doLogout()" class="w-full bg-red-50 text-danger py-3 rounded-xl font-medium btn-press">Logout</button>
+      </section>
+    </main>
+
+    <!-- Bottom Nav -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-bottom z-50">
+      <div class="max-w-lg mx-auto flex justify-around py-2">
+        <button onclick="showPage('dashboard')" data-page="dashboard" class="nav-btn flex flex-col items-center py-1 px-2 text-primary">
+          <span class="text-lg">🏠</span><span class="text-[10px] mt-0.5 font-medium">Home</span>
+        </button>
+        <button onclick="showPage('attendance')" data-page="attendance" class="nav-btn flex flex-col items-center py-1 px-2 text-gray-400">
+          <span class="text-lg">📅</span><span class="text-[10px] mt-0.5 font-medium">Attendance</span>
+        </button>
+        <button onclick="showPage('leave')" data-page="leave" class="nav-btn flex flex-col items-center py-1 px-2 text-gray-400">
+          <span class="text-lg">🏖️</span><span class="text-[10px] mt-0.5 font-medium">Leave</span>
+        </button>
+        <button onclick="showPage('advance')" data-page="advance" class="nav-btn flex flex-col items-center py-1 px-2 text-gray-400">
+          <span class="text-lg">💰</span><span class="text-[10px] mt-0.5 font-medium">Advance</span>
+        </button>
+        <button id="nav-team" onclick="showPage('team')" data-page="team" class="nav-btn hidden flex flex-col items-center py-1 px-2 text-gray-400">
+          <span class="text-lg">👥</span><span class="text-[10px] mt-0.5 font-medium">Team</span>
+        </button>
+        <button onclick="showPage('profile')" data-page="profile" class="nav-btn flex flex-col items-center py-1 px-2 text-gray-400">
+          <span class="text-lg">👤</span><span class="text-[10px] mt-0.5 font-medium">Profile</span>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-full shadow-lg opacity-0 pointer-events-none transition-all duration-300 z-50 max-w-[90vw] text-center"></div>
+
+  <!-- Firebase Compat SDK (works better on mobile local files) -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBT2IN3ZBtHaZWs_ob-GrezQW42tnaXcjc",
+      authDomain: "office-attendence-e470e.firebaseapp.com",
+      projectId: "office-attendence-e470e",
+      storageBucket: "office-attendence-e470e.firebasestorage.app",
+      messagingSenderId: "480169487363",
+      appId: "1:480169487363:web:9c4fcd35b293dd12a23236",
+      measurementId: "G-KM82QNPSSL"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let currentUser = null;
+    let userProfile = null;
+
+    function showAuthTab(tab) {
+      document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
+      document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
+      document.getElementById('tab-login').className = tab === 'login' 
+        ? 'flex-1 py-2.5 rounded-lg text-sm font-semibold bg-white shadow text-primary'
+        : 'flex-1 py-2.5 rounded-lg text-sm font-semibold text-gray-500';
+      document.getElementById('tab-register').className = tab === 'register'
+        ? 'flex-1 py-2.5 rounded-lg text-sm font-semibold bg-white shadow text-primary'
+        : 'flex-1 py-2.5 rounded-lg text-sm font-semibold text-gray-500';
+      clearAuthMsg();
+    }
+
+    function showAuthError(msg) {
+      const el = document.getElementById('auth-error');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      document.getElementById('auth-status').classList.add('hidden');
+    }
+    function showAuthStatus(msg) {
+      const el = document.getElementById('auth-status');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      document.getElementById('auth-error').classList.add('hidden');
+    }
+    function clearAuthMsg() {
+      document.getElementById('auth-error').classList.add('hidden');
+      document.getElementById('auth-status').classList.add('hidden');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.remove('opacity-0');
+      t.classList.add('opacity-100');
+      setTimeout(() => { t.classList.remove('opacity-100'); t.classList.add('opacity-0'); }, 2500);
+    }
+
+    function todayStr() {
+      return new Date().toISOString().slice(0, 10);
+    }
+    function formatTime() {
+      return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+    function formatDate(str) {
+      if (!str) return '';
+      return new Date(str + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    // ========== AUTH ==========
+    function doRegister() {
+      const name = document.getElementById('reg-name').value.trim();
+      const empid = document.getElementById('reg-empid').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const password = document.getElementById('reg-password').value;
+
+      if (!name || !email || !password) { showAuthError('Please fill all fields'); return; }
+      if (password.length < 6) { showAuthError('Password must be at least 6 characters'); return; }
+
+      showAuthStatus('Creating account... please wait');
+      document.getElementById('btn-register').disabled = true;
+
+      auth.createUserWithEmailAndPassword(email, password)
+        .then(async (cred) => {
+          const uid = cred.user.uid;
+          let role = 'employee';
+          try {
+            const snap = await db.collection('users').limit(1).get();
+            if (snap.empty) role = 'admin';
+          } catch (e) { role = 'admin'; }
+
+          try {
+            await db.collection('users').doc(uid).set({
+              name: name,
+              email: email,
+              employeeId: empid || ('EMP' + Date.now().toString().slice(-4)),
+              role: role,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          } catch (e) {
+            console.warn('Profile save issue', e);
+          }
+          showToast(role === 'admin' ? 'Account created! You are Admin' : 'Account created!');
+        })
+        .catch((err) => {
+          let msg = err.message || 'Error';
+          if (msg.includes('email-already-in-use')) msg = 'Email already registered. Please Login.';
+          else if (msg.includes('weak-password')) msg = 'Password too weak';
+          else if (msg.includes('invalid-email')) msg = 'Invalid email';
+          else if (msg.includes('network')) msg = 'Network error. Check internet';
+          else msg = msg.replace('Firebase: ', '').substring(0, 80);
+          showAuthError(msg);
+        })
+        .finally(() => {
+          document.getElementById('btn-register').disabled = false;
+        });
+    }
+
+    function doLogin() {
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      if (!email || !password) { showAuthError('Enter email and password'); return; }
+
+      showAuthStatus('Logging in... please wait');
+      document.getElementById('btn-login').disabled = true;
+
+      // Safety timeout - force proceed after 8 seconds even if profile load is slow
+      const loginTimeout = setTimeout(() => {
+        if (auth.currentUser && document.getElementById('app-screen').classList.contains('hidden')) {
+          currentUser = auth.currentUser;
+          userProfile = {
+            uid: currentUser.uid,
+            name: currentUser.email ? currentUser.email.split('@')[0] : 'User',
+            email: currentUser.email || '',
+            role: 'admin',
+            employeeId: 'EMP001'
+          };
+          showApp();
+          showToast('Logged in (profile loading slow)');
+        }
+      }, 8000);
+
+      auth.signInWithEmailAndPassword(email, password)
+        .then(() => {
+          // onAuthStateChanged will handle the rest
+        })
+        .catch((err) => {
+          clearTimeout(loginTimeout);
+          let msg = err.message || 'Login failed';
+          if (msg.includes('user-not-found') || msg.includes('wrong-password') || msg.includes('invalid-credential')) {
+            msg = 'Wrong email or password';
+          } else if (msg.includes('network')) {
+            msg = 'Network error. Check internet';
+          } else {
+            msg = msg.replace('Firebase: ', '').substring(0, 80);
+          }
+          showAuthError(msg);
+          document.getElementById('btn-login').disabled = false;
+        });
+    }
+
+    function doForgotPassword() {
+      const email = document.getElementById('login-email').value.trim();
+      if (!email) {
+        showAuthError('Enter your email first, then click Forgot Password');
+        return;
+      }
+      showAuthStatus('Sending password reset email...');
+      auth.sendPasswordResetEmail(email)
+        .then(() => {
+          showAuthError('');
+          showAuthStatus('Password reset email sent! Check your inbox (and spam folder).');
+          showToast('Reset email sent');
+        })
+        .catch((err) => {
+          let msg = err.message || 'Could not send email';
+          if (msg.includes('user-not-found')) msg = 'No account found with this email';
+          else if (msg.includes('invalid-email')) msg = 'Invalid email address';
+          else msg = msg.replace('Firebase: ', '').substring(0, 80);
+          showAuthError(msg);
+        });
+    }
+
+    function doLogout() {
+      auth.signOut();
+    }
+
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        currentUser = user;
+
+        // Immediately set a basic profile so the app can open right away
+        userProfile = {
+          uid: user.uid,
+          name: user.email ? user.email.split('@')[0] : 'User',
+          email: user.email || '',
+          role: 'admin',
+          employeeId: 'EMP001'
+        };
+
+        // Show the app immediately
+        showApp();
+
+        // Try to load real profile in the background (does not block login)
+        db.collection('users').doc(user.uid).get()
+          .then((doc) => {
+            if (doc.exists) {
+              userProfile = { uid: user.uid, ...doc.data() };
+              // Update UI with real name/role
+              document.getElementById('header-user').textContent = userProfile.name || userProfile.email;
+              document.getElementById('role-badge').textContent = userProfile.role === 'admin' ? 'Admin' : 'Employee';
+              document.getElementById('profile-name').textContent = userProfile.name || '—';
+              document.getElementById('profile-role').textContent = userProfile.role === 'admin' ? 'Administrator' : 'Employee';
+              document.getElementById('profile-id').textContent = 'ID: ' + (userProfile.employeeId || '—');
+              document.getElementById('profile-initial').textContent = (userProfile.name || 'U')[0].toUpperCase();
+
+              const teamBtn = document.getElementById('nav-team');
+              if (userProfile.role === 'admin') teamBtn.classList.remove('hidden');
+              else teamBtn.classList.add('hidden');
+            } else {
+              // Create profile in background
+              db.collection('users').doc(user.uid).set({
+                name: userProfile.name,
+                email: userProfile.email,
+                employeeId: 'EMP001',
+                role: 'admin',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+              }).catch(() => {});
+            }
+          })
+          .catch(() => {
+            // Ignore profile load errors - app already open
+          });
+
+      } else {
+        currentUser = null;
+        userProfile = null;
+        document.getElementById('auth-screen').classList.remove('hidden');
+        document.getElementById('app-screen').classList.add('hidden');
+      }
+    });
+
+    function showApp() {
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app-screen').classList.remove('hidden');
+      document.getElementById('header-user').textContent = userProfile.name || userProfile.email;
+      document.getElementById('role-badge').textContent = userProfile.role === 'admin' ? 'Admin' : 'Employee';
+      document.getElementById('profile-name').textContent = userProfile.name || '—';
+      document.getElementById('profile-role').textContent = userProfile.role === 'admin' ? 'Administrator' : 'Employee';
+      document.getElementById('profile-id').textContent = 'ID: ' + (userProfile.employeeId || '—');
+      document.getElementById('profile-email').textContent = userProfile.email || '';
+      document.getElementById('profile-initial').textContent = (userProfile.name || 'U')[0].toUpperCase();
+
+      const teamBtn = document.getElementById('nav-team');
+      if (userProfile.role === 'admin') teamBtn.classList.remove('hidden');
+      else teamBtn.classList.add('hidden');
+
+      const today = todayStr();
+      document.getElementById('absent-date').value = today;
+      document.getElementById('leave-from').value = today;
+      document.getElementById('leave-to').value = today;
+
+      showPage('dashboard');
+    }
+
+    function showPage(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      const el = document.getElementById('page-' + page);
+      if (el) { el.classList.remove('hidden'); el.classList.add('fade-in'); }
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        const active = btn.dataset.page === page;
+        btn.classList.toggle('text-primary', active);
+        btn.classList.toggle('text-gray-400', !active);
+      });
+
+      if (page === 'dashboard') renderDashboard();
+      if (page === 'attendance') renderAttendance();
+      if (page === 'leave') renderLeave();
+      if (page === 'advance') renderAdvance();
+      if (page === 'team') renderTeam();
+    }
+
+    // ========== ATTENDANCE ==========
+    function markAttendance(type) {
+      if (!currentUser) return;
+      const today = todayStr();
+      const ref = db.collection('attendance').doc(currentUser.uid + '_' + today);
+
+      ref.get().then(snap => {
+        let data = snap.exists ? snap.data() : { userId: currentUser.uid, date: today, status: 'present' };
+
+        if (type === 'in') {
+          if (data.in) { showToast('Already checked in'); return; }
+          data.in = formatTime();
+          data.status = 'present';
+          showToast('Checked in at ' + data.in);
+        } else {
+          if (!data.in) { showToast('Please check in first'); return; }
+          if (data.out) { showToast('Already checked out'); return; }
+          data.out = formatTime();
+          showToast('Checked out at ' + data.out);
+        }
+
+        ref.set(data, { merge: true }).then(() => renderDashboard());
+      });
+    }
+
+    function submitAbsence() {
+      const date = document.getElementById('absent-date').value;
+      const type = document.getElementById('absent-type').value;
+      const reason = document.getElementById('absent-reason').value.trim();
+      if (!date || !reason) { showToast('Fill date and reason'); return; }
+
+      db.collection('attendance').doc(currentUser.uid + '_' + date).set({
+        userId: currentUser.uid,
+        date: date,
+        status: type,
+        reason: reason
+      }, { merge: true }).then(() => {
+        document.getElementById('absent-reason').value = '';
+        showToast('Recorded');
+        renderAttendance();
+        renderDashboard();
+      });
+    }
+
+    // ========== LEAVE ==========
+    function submitLeave() {
+      const from = document.getElementById('leave-from').value;
+      const to = document.getElementById('leave-to').value;
+      const type = document.getElementById('leave-type').value;
+      const reason = document.getElementById('leave-reason').value.trim();
+      if (!from || !to || !reason) { showToast('Fill all fields'); return; }
+
+      db.collection('leaves').add({
+        userId: currentUser.uid,
+        userName: userProfile.name,
+        from, to, type, reason,
+        status: 'pending',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(() => {
+        document.getElementById('leave-reason').value = '';
+        showToast('Leave request submitted');
+        renderLeave();
+        renderDashboard();
+      });
+    }
+
+    function updateLeaveStatus(id, status) {
+      db.collection('leaves').doc(id).update({ status: status }).then(() => {
+        showToast('Leave ' + status);
+        renderLeave();
+        renderDashboard();
+        if (userProfile.role === 'admin') renderTeam();
+      });
+    }
+
+    // ========== ADVANCE ==========
+    function submitAdvance() {
+      const amount = parseFloat(document.getElementById('adv-amount').value);
+      const reason = document.getElementById('adv-reason').value.trim();
+      const repay = document.getElementById('adv-repay').value;
+      if (!amount || amount < 100 || !reason) { showToast('Enter valid amount and reason'); return; }
+
+      db.collection('advances').add({
+        userId: currentUser.uid,
+        userName: userProfile.name,
+        amount, reason, repay,
+        status: 'pending',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(() => {
+        document.getElementById('adv-amount').value = '';
+        document.getElementById('adv-reason').value = '';
+        showToast('Advance request submitted');
+        renderAdvance();
+        renderDashboard();
+      });
+    }
+
+    function updateAdvanceStatus(id, status) {
+      db.collection('advances').doc(id).update({ status: status }).then(() => {
+        showToast('Advance ' + status);
+        renderAdvance();
+        renderDashboard();
+        if (userProfile.role === 'admin') renderTeam();
+      });
+    }
+
+    // ========== RENDER ==========
+    function renderDashboard() {
+      const today = todayStr();
+      db.collection('attendance').doc(currentUser.uid + '_' + today).get().then(snap => {
+        const att = snap.exists ? snap.data() : {};
+        const badge = document.getElementById('today-status-badge');
+        if (att.out) {
+          badge.textContent = 'Completed';
+          badge.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700';
+        } else if (att.in) {
+          badge.textContent = 'Checked In';
+          badge.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-blue-100 text-blue-700';
+        } else {
+          badge.textContent = 'Not Marked';
+          badge.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600';
+        }
+        document.getElementById('checkin-time').textContent = att.in || '--:--';
+        document.getElementById('checkout-time').textContent = att.out || '--:--';
+        const btnIn = document.getElementById('btn-checkin');
+        const btnOut = document.getElementById('btn-checkout');
+        btnIn.disabled = !!att.in;
+        btnOut.disabled = !att.in || !!att.out;
+        btnIn.classList.toggle('opacity-40', !!att.in);
+        btnOut.classList.toggle('opacity-40', !att.in || !!att.out);
+      });
+
+      // Admin pending
+      const adminBox = document.getElementById('admin-pending');
+      if (userProfile.role === 'admin') {
+        adminBox.classList.remove('hidden');
+        Promise.all([
+          db.collection('leaves').where('status', '==', 'pending').get(),
+          db.collection('advances').where('status', '==', 'pending').get()
+        ]).then(([leaveSnap, advSnap]) => {
+          let html = '';
+          leaveSnap.forEach(d => {
+            const l = d.data();
+            html += `<div class="bg-orange-50 border border-orange-100 rounded-xl p-3">
+              <p class="font-medium text-sm">${l.userName || 'Employee'} • ${l.type}</p>
+              <p class="text-xs text-gray-500">${formatDate(l.from)} → ${formatDate(l.to)}</p>
+              <p class="text-xs mt-1">${l.reason || ''}</p>
+              <div class="flex gap-2 mt-2">
+                <button onclick="updateLeaveStatus('${d.id}','approved')" class="flex-1 text-xs bg-green-500 text-white py-1.5 rounded-lg">Approve</button>
+                <button onclick="updateLeaveStatus('${d.id}','rejected')" class="flex-1 text-xs bg-red-500 text-white py-1.5 rounded-lg">Reject</button>
+              </div>
+            </div>`;
+          });
+          advSnap.forEach(d => {
+            const a = d.data();
+            html += `<div class="bg-blue-50 border border-blue-100 rounded-xl p-3">
+              <p class="font-medium text-sm">${a.userName || 'Employee'} • ₹${a.amount}</p>
+              <p class="text-xs mt-1">${a.reason || ''}</p>
+              <div class="flex gap-2 mt-2">
+                <button onclick="updateAdvanceStatus('${d.id}','approved')" class="flex-1 text-xs bg-green-500 text-white py-1.5 rounded-lg">Approve</button>
+                <button onclick="updateAdvanceStatus('${d.id}','rejected')" class="flex-1 text-xs bg-red-500 text-white py-1.5 rounded-lg">Reject</button>
+              </div>
+            </div>`;
+          });
+          document.getElementById('pending-list').innerHTML = html || '<p class="text-sm text-gray-400">No pending requests</p>';
+        });
+      } else {
+        adminBox.classList.add('hidden');
+      }
+    }
+
+    function renderAttendance() {
+      db.collection('attendance').where('userId', '==', currentUser.uid).get().then(snap => {
+        const items = [];
+        snap.forEach(d => items.push(d.data()));
+        items.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        const list = document.getElementById('attendance-list');
+        if (items.length === 0) {
+          list.innerHTML = '<p class="text-sm text-gray-400 py-4 text-center">No records yet</p>';
+          return;
+        }
+        list.innerHTML = items.slice(0, 30).map(val => {
+          let color = 'bg-green-100 text-green-700', label = 'Present';
+          if (val.status === 'absent') { color = 'bg-red-100 text-red-700'; label = 'Absent'; }
+          else if (val.status === 'late') { color = 'bg-yellow-100 text-yellow-700'; label = 'Late'; }
+          else if (val.status === 'half') { color = 'bg-orange-100 text-orange-700'; label = 'Half Day'; }
+          return `<div class="flex justify-between items-center py-2 border-b border-gray-50">
+            <div><p class="font-medium text-sm">${formatDate(val.date)}</p>
+            <p class="text-xs text-gray-500">${val.in || ''} ${val.out ? '• ' + val.out : ''} ${val.reason || ''}</p></div>
+            <span class="text-xs px-2 py-1 rounded-full ${color}">${label}</span></div>`;
+        }).join('');
+      });
+    }
+
+    function renderLeave() {
+      db.collection('leaves').where('userId', '==', currentUser.uid).get().then(snap => {
+        const items = [];
+        snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+        const el = document.getElementById('leave-requests');
+        if (items.length === 0) {
+          el.innerHTML = '<p class="text-sm text-gray-400">No leave requests yet</p>';
+          return;
+        }
+        el.innerHTML = items.map(l => {
+          let badge = 'bg-yellow-100 text-yellow-700';
+          if (l.status === 'approved') badge = 'bg-green-100 text-green-700';
+          if (l.status === 'rejected') badge = 'bg-red-100 text-red-700';
+          return `<div class="border border-gray-100 rounded-xl p-3 mb-2">
+            <div class="flex justify-between"><p class="font-medium text-sm capitalize">${l.type}</p>
+            <span class="text-xs px-2 py-0.5 rounded-full ${badge}">${l.status}</span></div>
+            <p class="text-xs text-gray-500">${formatDate(l.from)} → ${formatDate(l.to)}</p>
+            <p class="text-xs mt-1">${l.reason || ''}</p></div>`;
+        }).join('');
+      });
+    }
+
+    function renderAdvance() {
+      db.collection('advances').where('userId', '==', currentUser.uid).get().then(snap => {
+        const items = [];
+        snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+        const el = document.getElementById('advance-list');
+        if (items.length === 0) {
+          el.innerHTML = '<p class="text-sm text-gray-400">No advance requests yet</p>';
+          return;
+        }
+        el.innerHTML = items.map(a => {
+          let badge = 'bg-yellow-100 text-yellow-700';
+          if (a.status === 'approved') badge = 'bg-green-100 text-green-700';
+          if (a.status === 'rejected') badge = 'bg-red-100 text-red-700';
+          return `<div class="border border-gray-100 rounded-xl p-3 mb-2">
+            <div class="flex justify-between"><p class="font-medium text-sm">₹${a.amount}</p>
+            <span class="text-xs px-2 py-0.5 rounded-full ${badge}">${a.status}</span></div>
+            <p class="text-xs mt-1">${a.reason || ''}</p></div>`;
+        }).join('');
+      });
+    }
+
+    function renderTeam() {
+      if (userProfile.role !== 'admin') return;
+      db.collection('users').get().then(snap => {
+        let html = '';
+        snap.forEach(d => {
+          const u = d.data();
+          html += `<div class="flex justify-between py-2 border-b border-gray-50">
+            <div><p class="font-medium text-sm">${u.name}</p>
+            <p class="text-xs text-gray-500">${u.employeeId || ''} • ${u.email}</p></div>
+            <span class="text-xs px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}">${u.role}</span></div>`;
+        });
+        document.getElementById('team-list').innerHTML = html || '<p class="text-sm text-gray-400">No employees</p>';
+      });
+
+      Promise.all([
+        db.collection('leaves').where('status', '==', 'pending').get(),
+        db.collection('advances').where('status', '==', 'pending').get()
+      ]).then(([leaveSnap, advSnap]) => {
+        let html = '';
+        leaveSnap.forEach(d => {
+          const l = d.data();
+          html += `<div class="bg-orange-50 rounded-xl p-3 mb-2">
+            <p class="font-medium text-sm">${l.userName} • Leave</p>
+            <p class="text-xs">${formatDate(l.from)} → ${formatDate(l.to)}</p>
+            <div class="flex gap-2 mt-2">
+              <button onclick="updateLeaveStatus('${d.id}','approved')" class="flex-1 text-xs bg-green-500 text-white py-1.5 rounded-lg">Approve</button>
+              <button onclick="updateLeaveStatus('${d.id}','rejected')" class="flex-1 text-xs bg-red-500 text-white py-1.5 rounded-lg">Reject</button>
+            </div></div>`;
+        });
+        advSnap.forEach(d => {
+          const a = d.data();
+          html += `<div class="bg-blue-50 rounded-xl p-3 mb-2">
+            <p class="font-medium text-sm">${a.userName} • ₹${a.amount}</p>
+            <div class="flex gap-2 mt-2">
+              <button onclick="updateAdvanceStatus('${d.id}','approved')" class="flex-1 text-xs bg-green-500 text-white py-1.5 rounded-lg">Approve</button>
+              <button onclick="updateAdvanceStatus('${d.id}','rejected')" class="flex-1 text-xs bg-red-500 text-white py-1.5 rounded-lg">Reject</button>
+            </div></div>`;
+        });
+        document.getElementById('all-pending').innerHTML = html || '<p class="text-sm text-gray-400">No pending</p>';
+      });
+    }
+  </script>
+</body>
+</html>
